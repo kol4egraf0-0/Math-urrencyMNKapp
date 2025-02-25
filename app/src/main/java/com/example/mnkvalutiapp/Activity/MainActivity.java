@@ -36,6 +36,9 @@ public class MainActivity extends AppCompatActivity {
     private LineChart lineChart;
     private CurrencyApiService apiService;
     private List<Double> historicalRates = new ArrayList<>();
+    private Handler handler = new Handler();
+
+    private int tickCount = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,16 +54,28 @@ public class MainActivity extends AppCompatActivity {
 
         apiService = retrofit.create(CurrencyApiService.class);
 
-        Handler handler = new Handler();
-        Runnable updateTask = new Runnable() {
+        fetchExchangeRates();
+
+        handler.post(updateTask);
+    }
+
+    private final Runnable updateTask = new Runnable() {
             @Override
             public void run() {
-                fetchExchangeRates();
+                tickCount++;
+
+                if(tickCount%12==0)
+                {
+                    fetchExchangeRates();
+                }
+                else {
+                    predictNextRate();
+                }
+
                 handler.postDelayed(this, 5000);
             }
         };
-        handler.post(updateTask);
-    }
+
 
     private void fetchExchangeRates() {
         apiService.getExchangeRates().enqueue(new Callback<ExchangeRateResponse>() {
@@ -88,6 +103,36 @@ public class MainActivity extends AppCompatActivity {
                 Log.e("API", "Ошибка загрузки данных", t);
             }
         });
+    }
+    private void predictNextRate() {
+        if (historicalRates.size() < 2) {
+            return;
+        }
+
+        // массивы X и Y для линейной регрессии
+        double[] x = new double[historicalRates.size()];
+        double[] y = new double[historicalRates.size()];
+        for (int i = 0; i < historicalRates.size(); i++) {
+            x[i] = i;
+            y[i] = historicalRates.get(i);
+        }
+
+        LinearRegression regression = new LinearRegression(x, y);
+
+        double futureX = x[x.length - 1] + 1;
+        double predictedRate = regression.predict(futureX);
+
+        double noise = (Math.random() - 0.01) * 0.01 * predictedRate; // ±1%
+        predictedRate += noise;
+
+        historicalRates.add(predictedRate);
+
+        if (historicalRates.size() > 10) {
+            historicalRates.remove(0);
+        }
+
+        Log.d("CHART", "Прогнозируем курс: " + predictedRate + " (размер списка: " + historicalRates.size() + ")");
+        showChart();
     }
 
     private void showChart() {
