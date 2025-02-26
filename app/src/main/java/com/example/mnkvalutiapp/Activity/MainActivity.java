@@ -89,7 +89,6 @@ public class MainActivity extends AppCompatActivity {
                     }
                     historicalRates.add(currentRate);
 
-                    Log.d("CHART", "Добавляем курс: " + currentRate + " (размер списка: " + historicalRates.size() + ")");
 
                     if (historicalRates.size() >= 2) {
                         showChart();
@@ -100,7 +99,6 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call<ExchangeRateResponse> call, Throwable t) {
-                Log.e("API", "Ошибка загрузки данных", t);
             }
         });
     }
@@ -109,7 +107,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        // массивы X и Y для линейной регрессии
+        //для линейной регрессии
         double[] x = new double[historicalRates.size()];
         double[] y = new double[historicalRates.size()];
         for (int i = 0; i < historicalRates.size(); i++) {
@@ -122,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
         double futureX = x[x.length - 1] + 1;
         double predictedRate = regression.predict(futureX);
 
-        double noise = (Math.random() - 0.01) * 0.01 * predictedRate; // ±1%
+        double noise = (Math.random() - 0.005) * 0.0001 * predictedRate; // ±1%
         predictedRate += noise;
 
         historicalRates.add(predictedRate);
@@ -131,7 +129,6 @@ public class MainActivity extends AppCompatActivity {
             historicalRates.remove(0);
         }
 
-        Log.d("CHART", "Прогнозируем курс: " + predictedRate + " (размер списка: " + historicalRates.size() + ")");
         showChart();
     }
 
@@ -154,7 +151,7 @@ public class MainActivity extends AppCompatActivity {
             entries.add(new Entry((float) futureX, (float) futureY));
         }
 
-        LineDataSet dataSet = new LineDataSet(entries, "Курс USD");
+        LineDataSet dataSet = new LineDataSet(entries, "Курс RUB по USD");
         dataSet.setColor(Color.BLUE);
         dataSet.setValueTextColor(Color.BLACK);
 
@@ -164,7 +161,7 @@ public class MainActivity extends AppCompatActivity {
         lineChart.invalidate();
 
         Description desc = new Description();
-        desc.setText("Прогноз курса USD");
+        desc.setText("Прогноз курса RUB");
         lineChart.setDescription(desc);
     }
 }
